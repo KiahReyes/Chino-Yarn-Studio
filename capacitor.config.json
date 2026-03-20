@@ -1,0 +1,16 @@
+{
+  "appId": "com.chino.yarnstudio",
+  "appName": "Chino Yarn Studio",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": true
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    },
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
+  }
+}

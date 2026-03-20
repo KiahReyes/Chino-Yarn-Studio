@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2c1a0e">
+<title>Chino Yarn Studio</title>
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cream:#faf6f1;--warm:#f0e8dc;--sand:#d4b896;--clay:#b07a55;
+  --rust:#8b4513;--deep:#2c1a0e;--text:#3d2b1f;--muted:#7a6254;
+  --white:#fff;--success:#3a7c5a;--error:#c0392b;
+  --shadow:0 4px 24px rgba(44,26,14,.10);--radius:12px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;font-size:15px;line-height:1.6}
+
+/* ── HEADER ── */
+.site-header{background:var(--deep);padding:env(safe-area-inset-top, 20px) 20px 14px;padding-top:calc(env(safe-area-inset-top, 0px) + 20px);position:sticky;top:0;z-index:200;box-shadow:0 2px 20px rgba(0,0,0,.3)}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.header-logo-row{display:flex;align-items:center;gap:12px}
+.logo-icon{font-size:32px}
+.site-header h1{font-family:'Playfair Display',serif;font-size:2rem;color:#fff;font-weight:700;line-height:1;letter-spacing:-.01em}
+.site-header h1 span{color:var(--sand)}
+.header-right{display:flex;align-items:center;gap:8px}
+.header-lock{background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);color:var(--sand);width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.header-lock:active{background:rgba(255,255,255,.25)}
+.header-bottom{display:flex;align-items:center;justify-content:space-between}
+.header-subtitle{color:var(--clay);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase}
+#syncStatus{display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--muted);white-space:nowrap}
+.sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sync-dot.online{background:#10b981}
+.sync-dot.offline{background:#ef4444}
+.sync-spinner{width:10px;height:10px;border:2px solid var(--clay);border-top-color:var(--sand);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── PULL TO REFRESH ── */
+#pullIndicator{display:none}
+
+/* ── FLOATING SYNC BUTTON ── */
+#floatSyncBtn{position:fixed;bottom:24px;right:20px;width:52px;height:52px;border-radius:50%;background:var(--rust);border:none;color:#fff;font-size:1.3rem;cursor:pointer;box-shadow:0 4px 20px rgba(139,69,19,.4);display:flex;align-items:center;justify-content:center;z-index:300;transition:transform .15s,box-shadow .15s;-webkit-tap-highlight-color:transparent}
+#floatSyncBtn:active{transform:scale(.92);box-shadow:0 2px 10px rgba(139,69,19,.3)}
+#floatSyncBtn.syncing #floatSyncIcon{animation:spin .7s linear infinite;display:inline-block}
+
+/* ── PIN SCREEN ── */
+#pinScreen{display:none;position:fixed;inset:0;background:var(--deep);z-index:999;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center}
+.pin-logo{font-size:3.5rem;margin-bottom:16px}
+#pinTitle{font-family:'Playfair Display',serif;font-size:1.8rem;color:var(--sand);margin-bottom:8px}
+#pinSubtitle{color:var(--clay);font-size:.9rem;margin-bottom:32px}
+#pinStep{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:16px;min-height:1em}
+#pinDots{display:flex;gap:16px;justify-content:center;margin-bottom:32px}
+.pin-dot{width:18px;height:18px;border-radius:50%;border:2px solid var(--clay);background:transparent;transition:all .2s}
+.pin-dot.filled{background:var(--clay);border-color:var(--clay);transform:scale(1.15)}
+#pinDots.shake{animation:shake .4s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+#pinInput{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.pin-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:280px;width:100%}
+.pin-key{background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.12);color:var(--sand);font-size:1.4rem;font-weight:500;font-family:inherit;padding:18px;border-radius:12px;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.pin-key:active{background:var(--clay);border-color:var(--clay);transform:scale(.95)}
+.pin-key.zero{grid-column:2}
+.pin-key.del{background:rgba(255,255,255,.04);color:var(--muted);font-size:1rem}
+
+/* ── NAV ── */
+.nav-tabs{background:var(--deep);border-top:1px solid rgba(255,255,255,.06);display:none;overflow-x:auto;scrollbar-width:none;padding:0 8px}
+.nav-tabs::-webkit-scrollbar{display:none}
+.nav-tab{display:inline-flex;align-items:center;gap:7px;padding:16px 20px;color:var(--muted);text-decoration:none;font-size:.92rem;font-weight:500;white-space:nowrap;border-bottom:4px solid transparent;transition:color .2s,border-color .2s;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.nav-tab:hover{color:var(--sand)}
+.nav-tab.active{color:var(--sand);border-bottom-color:var(--clay)}
+
+/* ── DASHBOARD ── */
+.dash-section-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--clay);margin-bottom:10px}
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.dash-stat{background:var(--white);border-radius:var(--radius);padding:14px;text-align:center;box-shadow:var(--shadow)}
+.dash-stat-highlight{background:var(--deep)}
+.dash-stat-highlight .dash-stat-val{color:var(--sand)}
+.dash-stat-highlight .dash-stat-label{color:var(--clay)}
+.dash-stat-val{font-size:1.4rem;font-weight:700;color:var(--deep);line-height:1.2}
+.dash-stat-label{font-size:.72rem;color:var(--muted);margin-top:4px}
+.dash-card{background:var(--white);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.dash-card-label{font-size:.75rem;color:var(--muted);margin-bottom:8px}
+.dash-card-main{font-size:1.05rem;font-weight:700;color:var(--deep)}
+.dash-card-sub{font-size:.8rem;color:var(--clay);margin-top:3px}
+.dash-recent-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--warm);font-size:.85rem}
+.dash-recent-row:last-child{border-bottom:none}
+.dash-recent-qty{color:var(--clay);font-weight:600;white-space:nowrap;margin-left:12px}
+.dash-progress-bar{height:10px;background:var(--warm);border-radius:20px;overflow:hidden;margin-top:10px}
+.dash-progress-fill{height:100%;background:linear-gradient(90deg,var(--clay),var(--rust));border-radius:20px;transition:width .6s ease}
+.container{max-width:1280px;margin:0 auto;padding:20px 16px}
+.flash{padding:12px 16px;border-radius:var(--radius);margin-bottom:18px;font-weight:500;display:none;align-items:center;gap:10px;animation:slideIn .3s ease;position:sticky;top:70px;z-index:100}
+.flash.success{background:#d1fae5;color:var(--success);border:1px solid #6ee7b7}
+.flash.error{background:#fee2e2;color:var(--error);border:1px solid #fca5a5}
+@keyframes slideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+
+/* ── STATS ── */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--white);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);border-left:4px solid var(--clay)}
+.stat-num{font-family:'Playfair Display',serif;font-size:1.8rem;color:var(--rust);line-height:1}
+.stat-label{color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;margin-top:4px}
+.stat-icon{font-size:1.2rem;margin-bottom:4px}
+.stat-mini{background:var(--cream);border-radius:8px;padding:8px 14px;font-size:.82rem}
+.stat-mini-label{color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.08em}
+.stat-mini-val{font-weight:600;font-size:1.1rem;color:var(--rust)}
+
+/* ── CARDS ── */
+.card{background:var(--white);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:20px}
+.section-title{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--deep);margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--warm);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.section-title-left{display:flex;align-items:center;gap:8px}
+
+/* ── FORMS ── */
+.form-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:14px}
+@media(min-width:480px){.form-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}}
+.form-group{display:flex;flex-direction:column;gap:4px}
+label{font-size:.74rem;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+input[type="text"],input[type="email"],input[type="number"],input[type="date"],select,textarea{padding:10px 12px;border:1.5px solid var(--warm);border-radius:8px;font-family:inherit;font-size:.95rem;color:var(--text);background:var(--cream);transition:border-color .2s;outline:none;width:100%;-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{border-color:var(--clay);box-shadow:0 0 0 3px rgba(176,122,85,.15);background:var(--white)}
+textarea{resize:vertical;min-height:70px}
+.autocalc{background:#f5f0eb !important}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:11px 22px;border:none;border-radius:8px;font-family:inherit;font-size:.9rem;font-weight:500;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.btn-primary{background:var(--rust);color:#fff}
+.btn-primary:active{background:var(--deep)}
+.btn-sm{padding:8px 14px;font-size:.8rem;border-radius:6px}
+.btn-edit{background:#e0f2fe;color:#0369a1;border:none;cursor:pointer;display:inline-flex;align-items:center;padding:6px 10px;border-radius:6px;font-size:.8rem;font-weight:500;-webkit-tap-highlight-color:transparent}
+.btn-delete{background:#fee2e2;color:#b91c1c;border:none;cursor:pointer;display:inline-flex;align-items:center;padding:6px 10px;border-radius:6px;font-size:.8rem;font-weight:500;-webkit-tap-highlight-color:transparent}
+.btn-cancel{background:var(--warm);color:var(--muted);border:none;cursor:pointer;padding:11px 18px;border-radius:8px;font-family:inherit;font-size:.9rem;font-weight:500;-webkit-tap-highlight-color:transparent}
+.btn-icon{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;cursor:pointer;border:none;-webkit-tap-highlight-color:transparent}
+.btn-add{background:var(--rust);color:#fff}
+.action-btns{display:flex;gap:6px;align-items:center}
+
+/* ── TABLES ── */
+.table-wrap{overflow-x:auto;border-radius:var(--radius);-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:.84rem}
+thead th{background:var(--deep);color:var(--sand);padding:10px 12px;text-align:left;font-weight:500;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--warm);transition:background .15s}
+tbody tr:hover{background:var(--cream)}
+tbody td{padding:9px 12px;vertical-align:middle}
+tbody tr:last-child{border-bottom:none}
+
+/* ── BADGES ── */
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:.7rem;font-weight:600;color:#fff;white-space:nowrap}
+.weight-badge{background:var(--sand);color:var(--deep);font-size:.66rem;padding:2px 6px;border-radius:20px;display:inline-block;white-space:nowrap}
+
+/* ── OVERLAYS ── */
+.overlay-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:400;align-items:flex-end;justify-content:center;padding:0}
+.overlay-bg.open{display:flex}
+.overlay{background:var(--white);border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-height:92vh;overflow-y:auto;position:relative;box-shadow:0 -8px 40px rgba(0,0,0,.25)}
+@media(min-width:600px){.overlay-bg{align-items:center;padding:20px}.overlay{border-radius:16px;max-width:600px;padding:28px}}
+.overlay-wide{max-width:820px !important}
+.overlay-title{font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--deep);margin-bottom:18px;padding-bottom:10px;border-bottom:2px solid var(--warm)}
+.overlay-close{position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:50%;background:var(--warm);border:none;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+
+/* ── INVENTORY ── */
+.inv-row{cursor:pointer}
+.inv-row:hover td{background:var(--warm) !important}
+.inv-row td:first-child{font-weight:600}
+
+/* ── PROJECTS ── */
+.project-group{margin-bottom:24px}
+.project-group-title{font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.project-group-title::after{content:'';flex:1;height:1px;background:var(--warm)}
+.project-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden;border:1.5px solid var(--warm)}
+.project-card-header{padding:14px 16px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.project-info{flex:1;min-width:0}
+.project-name{font-weight:600;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.project-meta{font-size:.74rem;color:var(--muted);margin-top:2px}
+.project-card-body{display:none;border-top:1.5px solid var(--warm);padding:16px}
+.project-card-body.open{display:block}
+
+/* ── MANAGE ── */
+.yarn-entry-form{background:var(--cream);border-radius:var(--radius);padding:18px;margin-bottom:20px;border:1.5px solid var(--warm)}
+.form-section-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--clay);margin:14px 0 8px;display:flex;align-items:center;gap:8px}
+.form-section-label::before,.form-section-label::after{content:'';flex:1;height:1px;background:var(--sand)}
+.yarn-data-row{cursor:pointer}
+.yarn-data-row:hover td{background:var(--warm) !important}
+.colourway-detail-row{padding:8px 0;border-bottom:1px solid var(--warm);display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;align-items:center;font-size:.83rem}
+.colourway-detail-row:last-child{border-bottom:none}
+.colourway-detail-header{font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;padding:5px 0;border-bottom:2px solid var(--warm);display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px}
+
+/* ── MISC ── */
+.empty-state{text-align:center;padding:36px;color:var(--muted)}
+.empty-state .empty-icon{font-size:2rem;margin-bottom:8px}
+.skein-counter{display:flex;align-items:center;gap:6px}
+.skein-counter .qty{font-weight:600;min-width:28px;text-align:center}
+.skein-btn{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--clay);background:var(--cream);color:var(--rust);font-size:1rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;-webkit-tap-highlight-color:transparent}
+@media(max-width:400px){.stat-num{font-size:1.4rem}.stat-grid{gap:8px}.stat-card{padding:12px}}
+
+/* ── DASHBOARD ── */
+.dashboard-section-title{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.13em;color:var(--clay);margin:20px 0 12px;display:flex;align-items:center;gap:8px}
+.dashboard-section-title::after{content:'';flex:1;height:1px;background:var(--warm)}
+.dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.dashboard-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 12px;text-align:center;border:1.5px solid var(--warm)}
+.dashboard-card-icon{font-size:1.4rem;margin-bottom:4px}
+.dashboard-card-val{font-size:1.5rem;font-weight:800;color:var(--deep);line-height:1.1}
+.dashboard-card-label{font-size:.72rem;color:var(--muted);margin-top:4px;font-weight:500}
+.dashboard-highlight{background:var(--cream);border-radius:var(--radius);border:1.5px solid var(--sand);padding:14px 16px;margin-bottom:12px}
+.dashboard-highlight-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--clay);margin-bottom:4px}
+.dashboard-highlight-val{font-weight:700;font-size:.95rem;color:var(--deep)}
+.dashboard-highlight-sub{font-size:.78rem;color:var(--muted);margin-top:2px}
+.dashboard-list-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);border:1.5px solid var(--warm);padding:14px 16px;margin-bottom:12px}
+.dashboard-list-title{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--clay);margin-bottom:10px}
+.dashboard-list-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--warm)}
+.dashboard-list-row:last-child{border-bottom:none}
+.usage-bar-track{height:12px;border-radius:999px;overflow:hidden;display:flex}
+.usage-bar-used{height:100%;background:#c47c5a;transition:width .5s ease}
+.usage-bar-stock{height:100%;background:#6a9e6a;transition:width .5s ease}
+</style>
+</head>
+<body>
+
+<!-- ══ PIN SCREEN ══ -->
+<div id="pinScreen">
+  <div class="pin-logo">🧶</div>
+  <div id="pinTitle">Welcome back, Kiah</div>
+  <div id="pinSubtitle">Enter your PIN to continue</div>
+  <div id="pinStep"></div>
+  <div id="pinDots">
+    <div class="pin-dot"></div>
+    <div class="pin-dot"></div>
+    <div class="pin-dot"></div>
+    <div class="pin-dot"></div>
+  </div>
+  <input type="tel" id="pinInput" inputmode="numeric" maxlength="4" oninput="onPINInput(this)" autocomplete="off">
+  <div class="pin-keypad">
+    <button class="pin-key" onclick="pinKey('1')">1</button>
+    <button class="pin-key" onclick="pinKey('2')">2</button>
+    <button class="pin-key" onclick="pinKey('3')">3</button>
+    <button class="pin-key" onclick="pinKey('4')">4</button>
+    <button class="pin-key" onclick="pinKey('5')">5</button>
+    <button class="pin-key" onclick="pinKey('6')">6</button>
+    <button class="pin-key" onclick="pinKey('7')">7</button>
+    <button class="pin-key" onclick="pinKey('8')">8</button>
+    <button class="pin-key" onclick="pinKey('9')">9</button>
+    <button class="pin-key zero" onclick="pinKey('0')">0</button>
+    <button class="pin-key del" onclick="pinDel()">⌫</button>
+  </div>
+</div>
+
+<!-- ══ FLOATING SYNC BUTTON ══ -->
+<button id="floatSyncBtn" onclick="syncNow(false)" title="Sync now">
+  <span id="floatSyncIcon">☁️</span>
+</button>
+
+<!-- ══ HEADER ══ -->
+<header class="site-header">
+  <div class="header-top">
+    <div class="header-logo-row">
+      <div class="logo-icon">🧶</div>
+      <h1><span>Chino</span> Yarn Studio</h1>
+    </div>
+    <div class="header-right">
+      <button class="header-lock" onclick="lockApp()">🔒</button>
+    </div>
+  </div>
+  <div class="header-bottom">
+    <div class="header-subtitle">Yarn Inventory &amp; Projects</div>
+    <span id="syncStatus"><span class="sync-dot offline"></span>Offline</span>
+  </div>
+</header>
+
+<!-- ══ NAV ══ -->
+<nav class="nav-tabs" id="mainNav">
+  <span class="nav-tab active" data-tab="dashboard">📊 Dashboard</span>
+  <span class="nav-tab" data-tab="inventory">📦 Inventory</span>
+  <span class="nav-tab" data-tab="projects">🪡 Projects</span>
+  <span class="nav-tab" data-tab="manage">⚙️ Manage</span>
+</nav>
+
+<!-- ══ MAIN ══ -->
+<main class="container">
+  <div class="flash" id="flashMsg"></div>
+  <div id="mainContent">
+    <div style="text-align:center;padding:60px 20px;color:var(--muted)">Loading…</div>
+  </div>
+</main>
+
+<!-- ══ OVERLAYS ══ -->
+
+<!-- ADD INVENTORY -->
+<div class="overlay-bg" id="addInventoryOverlay">
+<div class="overlay">
+  <button class="overlay-close" onclick="closeOverlay('addInventoryOverlay')">✕</button>
+  <div class="overlay-title">📦 Add to Stash</div>
+  <div class="form-grid">
+    <div class="form-group" style="grid-column:1/-1"><label>Colourway *</label><select id="addInvColourway" required><option value="">— Select —</option></select></div>
+    <div class="form-group"><label>Qty of Skeins *</label><input type="number" step="0.1" id="addInvQty" placeholder="e.g. 3.3"></div>
+    <div class="form-group"><label>Location Bin #</label><input type="number" id="addInvBin" placeholder="e.g. 5"></div>
+    <div class="form-group"><label>Purchase Date</label><input type="date" id="addInvDate"></div>
+    <div class="form-group"><label>Cost per Skein (₱)</label><input type="number" step="0.01" id="addInvCost" placeholder="e.g. 76.00"></div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn btn-primary" onclick="submitAddInventory()">➕ Add to Stash</button>
+    <button class="btn-cancel" onclick="closeOverlay('addInventoryOverlay')">Cancel</button>
+  </div>
+</div>
+</div>
+
+<!-- EDIT INVENTORY -->
+<div class="overlay-bg" id="editInventoryOverlay">
+<div class="overlay">
+  <button class="overlay-close" onclick="closeOverlay('editInventoryOverlay')">✕</button>
+  <div class="overlay-title">✏️ Edit Stash Entry</div>
+  <input type="hidden" id="editInvId">
+  <div class="form-grid">
+    <div class="form-group" style="grid-column:1/-1"><label>Colourway *</label><select id="editInvColourway" required></select></div>
+    <div class="form-group"><label>Qty of Skeins *</label><input type="number" step="0.1" id="editInvQty" required></div>
+    <div class="form-group"><label>Location Bin #</label><input type="number" id="editInvBin"></div>
+    <div class="form-group"><label>Purchase Date</label><input type="date" id="editInvDate"></div>
+    <div class="form-group"><label>Cost per Skein (₱)</label><input type="number" step="0.01" id="editInvCost"></div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn btn-primary" onclick="submitEditInventory()">💾 Save Changes</button>
+    <button class="btn-cancel" onclick="closeOverlay('editInventoryOverlay')">Cancel</button>
+  </div>
+</div>
+</div>
+
+<!-- INVENTORY DETAIL -->
+<div class="overlay-bg" id="invDetailOverlay">
+<div class="overlay overlay-wide">
+  <button class="overlay-close" onclick="closeOverlay('invDetailOverlay')">✕</button>
+  <div class="overlay-title" id="invDetailTitle">📦 Yarn Detail</div>
+  <div id="invDetailContent"></div>
+</div>
+</div>
+
+<!-- ADD PROJECT -->
+<div class="overlay-bg" id="addProjectOverlay">
+<div class="overlay">
+  <button class="overlay-close" onclick="closeOverlay('addProjectOverlay')">✕</button>
+  <div class="overlay-title">🪡 New Project</div>
+  <div class="form-grid">
+    <div class="form-group"><label>Project Name *</label><input type="text" id="addProjName" placeholder="e.g. Granny Squares Blanket"></div>
+    <div class="form-group"><label>Status *</label>
+      <select id="addProjStatus"><option>Planned</option><option>In Progress</option><option>On Hold</option><option>Finished</option><option>Frogged</option></select>
+    </div>
+    <div class="form-group"><label>Date Started</label><input type="date" id="addProjStart"></div>
+    <div class="form-group"><label>Date Ended</label><input type="date" id="addProjEnd"></div>
+    <div class="form-group" style="grid-column:1/-1"><label>Notes</label><textarea id="addProjNotes" placeholder="Pattern, needle size, gauge…"></textarea></div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn btn-primary" onclick="submitAddProject()">➕ Create Project</button>
+    <button class="btn-cancel" onclick="closeOverlay('addProjectOverlay')">Cancel</button>
+  </div>
+</div>
+</div>
+
+<!-- EDIT PROJECT -->
+<div class="overlay-bg" id="editProjectOverlay">
+<div class="overlay">
+  <button class="overlay-close" onclick="closeOverlay('editProjectOverlay')">✕</button>
+  <div class="overlay-title">✏️ Edit Project</div>
+  <input type="hidden" id="editProjId">
+  <div class="form-grid">
+    <div class="form-group"><label>Project Name *</label><input type="text" id="editProjName" required></div>
+    <div class="form-group"><label>Status *</label>
+      <select id="editProjStatus"><option>Planned</option><option>In Progress</option><option>On Hold</option><option>Finished</option><option>Frogged</option></select>
+    </div>
+    <div class="form-group"><label>Date Started</label><input type="date" id="editProjStart"></div>
+    <div class="form-group"><label>Date Ended</label><input type="date" id="editProjEnd"></div>
+    <div class="form-group" style="grid-column:1/-1"><label>Notes</label><textarea id="editProjNotes"></textarea></div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn btn-primary" onclick="submitEditProject()">💾 Save Changes</button>
+    <button class="btn-cancel" onclick="closeOverlay('editProjectOverlay')">Cancel</button>
+  </div>
+</div>
+</div>
+
+<!-- LOG YARN USAGE -->
+<div class="overlay-bg" id="logUsageOverlay">
+<div class="overlay">
+  <button class="overlay-close" onclick="closeOverlay('logUsageOverlay')">✕</button>
+  <div class="overlay-title">📊 Log Yarn Usage</div>
+  <input type="hidden" id="logUsageProjId">
+  <div class="form-grid">
+    <div class="form-group" style="grid-column:1/-1"><label>Yarn from Stash *</label><select id="logUsageInvSelect" required onchange="calcUsage('logUsage')"><option value="">— Select —</option></select></div>
+    <div class="form-group"><label>Skeins Used</label><input type="number" step="0.01" id="logUsageSkeins" oninput="calcUsage('logUsage')"></div>
+    <div class="form-group"><label>Meters Used <span style="color:var(--clay);font-size:.7rem">(auto)</span></label><input type="number" step="0.01" id="logUsageMeters" class="autocalc"></div>
+    <div class="form-group"><label>Grams Used <span style="color:var(--clay);font-size:.7rem">(auto)</span></label><input type="number" step="0.01" id="logUsageGrams" class="autocalc"></div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn btn-primary" onclick="submitLogUsage()">📝 Log Usage</button>
+    <button class="btn-cancel" onclick="closeOverlay('logUsageOverlay')">Cancel</button>
+  </div>
+</div>
+</div>
+
+<!-- EDIT USAGE -->
+<div class="overlay-bg" id="editUsageOverlay">
+<div class="overlay">
+  <button class="overlay-close" onclick="closeOverlay('editUsageOverlay')">✕</button>
+  <div class="overlay-title">✏️ Edit Yarn Usage</div>
+  <input type="hidden" id="editUsageId">
+  <div class="form-grid">
+    <div class="form-group" style="grid-column:1/-1"><label>Yarn from Stash *</label><select id="editUsageInvSelect" required onchange="calcUsage('editUsage')"><option value="">— Select —</option></select></div>
+    <div class="form-group"><label>Skeins Used</label><input type="number" step="0.01" id="editUsageSkeins" oninput="calcUsage('editUsage')"></div>
+    <div class="form-group"><label>Meters Used <span style="color:var(--clay);font-size:.7rem">(auto)</span></label><input type="number" step="0.01" id="editUsageMeters" class="autocalc"></div>
+    <div class="form-group"><label>Grams Used <span style="color:var(--clay);font-size:.7rem">(auto)</span></label><input type="number" step="0.01" id="editUsageGrams" class="autocalc"></div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn btn-primary" onclick="submitEditUsage()">💾 Save Changes</button>
+    <button class="btn-cancel" onclick="closeOverlay('editUsageOverlay')">Cancel</button>
+  </div>
+</div>
+</div>
+
+<!-- EDIT YARN -->
+<div class="overlay-bg" id="editYarnOverlay">
+<div class="overlay">
+  <button class="overlay-close" onclick="closeOverlay('editYarnOverlay')">✕</button>
+  <div class="overlay-title">✏️ Edit Yarn</div>
+  <input type="hidden" id="editYarnId">
+  <div class="form-grid">
+    <div class="form-group"><label>Brand *</label><select id="editYarnBrand" required></select></div>
+    <div class="form-group"><label>Yarn Name *</label><input type="text" id="editYarnName" required></div>
+    <div class="form-group"><label>Fiber Content</label><input type="text" id="editYarnFiber"></div>
+    <div class="form-group"><label>Weight</label>
+      <select id="editYarnWeight">
+        <option value="">— Select —</option>
+        <option value="0">0 – Lace</option><option value="1">1 – Fingering</option>
+        <option value="2">2 – Sport</option><option value="3">3 – DK</option>
+        <option value="4">4 – Worsted</option><option value="5">5 – Bulky</option>
+        <option value="6">6 – Super Bulky</option><option value="7">7 – Roving</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Meters / Skein</label><input type="number" step="0.01" id="editYarnMeters"></div>
+    <div class="form-group"><label>Grams / Skein</label><input type="number" step="0.01" id="editYarnGrams"></div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn btn-primary" onclick="submitEditYarn()">💾 Save</button>
+    <button class="btn-cancel" onclick="closeOverlay('editYarnOverlay')">Cancel</button>
+  </div>
+</div>
+</div>
+
+<!-- EDIT COLOURWAY -->
+<div class="overlay-bg" id="editColourwayOverlay">
+<div class="overlay" style="max-width:440px">
+  <button class="overlay-close" onclick="closeOverlay('editColourwayOverlay')">✕</button>
+  <div class="overlay-title">✏️ Edit Colourway</div>
+  <input type="hidden" id="editCwId">
+  <div class="form-grid" style="grid-template-columns:1fr">
+    <div class="form-group"><label>Colour Name *</label><input type="text" id="editCwName" required></div>
+    <div class="form-group"><label>Lot Number</label><input type="text" id="editCwLot"></div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn btn-primary" onclick="submitEditColourway()">💾 Save</button>
+    <button class="btn-cancel" onclick="closeOverlay('editColourwayOverlay')">Cancel</button>
+  </div>
+</div>
+</div>
+
+<footer style="text-align:center;padding:20px;color:var(--muted);font-size:.75rem;border-top:1px solid var(--warm);margin-top:10px">
+  Chino Yarn Studio &mdash; 0 dropped stitches 💾
+</footer>
+
+<script src="app.js"></script>
+<script>
+// Keypad helpers (bridge between HTML buttons and app.js PIN logic)
+function pinKey(digit) {
+  const input = document.getElementById('pinInput');
+  const val   = (input.value + digit).slice(0, 4);
+  input.value = val;
+  onPINInput(input);
+}
+function pinDel() {
+  const input = document.getElementById('pinInput');
+  input.value = input.value.slice(0, -1);
+  updatePINDots(input.value);
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(e => console.log('SW error', e));
+}
+</script>
+</body>
+</html>
