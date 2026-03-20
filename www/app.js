@@ -5,8 +5,10 @@
 // ═══════════════════════════════════════════════════
 
 // ── CONFIG ────────────────────────────────────────
-const SUPABASE_URL  = 'https://mqinnlxkmhpxuzmkjner.supabase.co';
-const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xaW5ubHhrbWhweHV6bWtqbmVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5NDQyNDgsImV4cCI6MjA4ODUyMDI0OH0.bNAWp84lIIairXSaJ13xh3C0JC1y1MVyEoIdyRwDZHQ';
+// 👇 Replace these with your own Supabase project details
+// See README.md for setup instructions
+const SUPABASE_URL  = 'https://YOUR_PROJECT_REF.supabase.co';
+const SUPABASE_KEY  = 'YOUR_SUPABASE_ANON_KEY';
 
 // ── DB SETUP ──────────────────────────────────────
 const DB_NAME    = 'chinoYarnDB';
